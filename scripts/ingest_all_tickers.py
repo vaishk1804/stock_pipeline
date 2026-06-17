@@ -4,7 +4,9 @@ scripts/ingest_all_tickers.py
 Fetches daily OHLCV data for all 10 tickers from Alpha Vantage and upserts into raw.daily_prices.
 
 Rate Limit: Alpha Vantage free tier = 25 calls/day, 5 calls/min.
-Sleep 15 seconds between each ticker to stay safe
+Two ways to use:
+  1. Run directly:  python scripts/ingest_all_tickers.py
+  2. Import into Airflow DAG: from ingest_all_tickers import fetch_ticker
 """
 
 import json
@@ -15,7 +17,7 @@ import psycopg2.extras
 import requests
 
 from dotenv import load_dotenv
-
+from typing import List, Dict
 load_dotenv()
 
 # Loading .env file so we don't hardcode and credentials
@@ -26,11 +28,11 @@ API_URL="https://www.alphavantage.co/query"
 TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "JPM", "JNJ", "V"]
 
 DB_CONN={
-  "host":os.getenv("STOCK_DB_HOST"),
+  "host":os.getenv("STOCK_DB_HOST","127.0.0.1"),
   "port": int(os.getenv("STOCK_DB_PORT",5433)),
   "dbname": os.getenv("STOCK_DB_NAME","stocks"),
-  "user": os.getenv("STOCK_DB_USER"),
-  "password": os.getenv("STOCK_DB_PASSWORD"),
+  "user": os.getenv("STOCK_DB_USER","airflow"),
+  "password": os.getenv("STOCK_DB_PASSWORD","airflow"),
 }
 
 UPSERT_SQL="""
@@ -48,7 +50,7 @@ DO UPDATE SET
   ingested_At = NOW();
 """
 
-def fetch_ticker(ticker: str) -> list[dict]:
+def _fetch_from_api(ticker: str) -> List[Dict]:
   """Fetch 100 days of OHLCV for one ticker. Returns list of row dicts"""
   url=(
     f"{API_URL}"
@@ -84,16 +86,27 @@ def fetch_ticker(ticker: str) -> list[dict]:
     })
   return rows
   
-def upsert_rows(conn, rows: list[dict]):
-  """Write a batch of rows to raw.daily_prices"""
-  with conn:
-    with conn.cursor() as cur:
-      psycopg2.extras.execute_batch(cur,UPSERT_SQL,rows,page_size=100)
+def fetch_ticker(ticker:str):
+  """
+    Fetch and upsert one ticker.
+    Called by Airflow — one task per ticker.
+    Also callable standalone for testing.
+    """
+  rows = _fetch_from_api(ticker)
+  conn = psycopg2.connect(**DB_CONN)
+  try:
+    with conn:
+      with conn.cursor() as cur:
+        psycopg2.extras.execute_batch(cur,UPSERT_SQL,rows,page_size=100)
+    print(f"Upserted {len(rows)} rows for {ticker}")
+  finally:
+    conn.close()
+
+  # Rate limit: 5 calls/min on free tier
+  time.sleep(15)
 
 def main():
   print(">>> Connecting to PostgreSQL..")
-  conn = psycopg2.connect(**DB_CONN)
-  print(">>> Connected.\n")
 
   results=[]   # track success/failure per ticker
 
@@ -102,31 +115,19 @@ def main():
 
     try:
       rows=fetch_ticker(ticker)
-      upsert_rows(conn,rows)
-      print(f"{len(rows)} rows upserted for {ticker}")
-      results.append((ticker,len(rows),"OK"))
+      results.append((ticker,"OK"))
 
     except Exception as e:
       print(f"Failed for {ticker}:{e}")
-      results.append((ticker,0,str(e)))
-
-    # Rate limit: 5 calls/min on free tier -> wait 15s between calls
-    # Skip sleep after the last ticker
-    if i<len(TICKERS)-1:
-      print(f"Waiting 15s(rate limit)...")
-      time.sleep(15)
-
-  conn.close()
+      results.append((ticker,str(e)))
 
   # Summary
   print("\n" + "="*50)
   print("INGESTION SUMMARY")
   print("="*50)
   total_rows = 0
-  for ticker, row_count, status in results:
-      print(f"  {ticker:<6} {status:<5} {row_count:>5} rows")
-      total_rows += row_count
-  print(f"\n  Total rows upserted: {total_rows}")
+  for ticker,status in results:
+      print(f"  {ticker:<6} {status}")
   print("="*50)
 
 if __name__ =="__main__":

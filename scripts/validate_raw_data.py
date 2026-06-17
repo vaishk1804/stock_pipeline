@@ -19,7 +19,7 @@ EXPECTED_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN","META","NVDA","TSLA","JPM","
 DB_CONN={
   "host": os.getenv("STOCK_DB_HOST", "127.0.0.1"),
   "port": int(os.getenv("STOCK_DB_PORT",5433)),
-  "dbname": os.getenv("STOCK_DB_NAME"),
+  "dbname": os.getenv("STOCK_DB_NAME","stocks"),
   "user": os.getenv("STOCK_DB_USER"),
   "password":os.getenv("STOCK_DB_PASSWORD"),
 }
@@ -152,7 +152,7 @@ SELECT ticker, COUNT(*) as rows
   # Exit with non-zero code if any check failed
   # # (Airflow reads exit code - that is how the DAG knows to stop)
   if failed > 0:
-    exit(1)
+    raise ValueError(f"{failed}  data quality checks failed")
 
 if __name__=="__main__":
   main() 
