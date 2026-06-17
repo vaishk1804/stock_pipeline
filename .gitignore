@@ -1,0 +1,26 @@
+# Environment 
+.env 
+*.env
+
+# Airflow
+airflow/logs
+airflow/plugins/__pycache__/
+
+# dbt
+dbt/stock_mart/target/
+dbt/stock_mart/dbt_packages/
+dbt/stock_mart/.user.yml
+dbt/profiles.yml
+
+# Python
+__pycache__/
+*py[cod]
+.venv/
+venv/
+
+# Docket
+postgres_data/
+
+# OS
+.DS_Store
+*.swp
