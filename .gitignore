@@ -11,14 +11,15 @@ dbt/stock_mart/target/
 dbt/stock_mart/dbt_packages/
 dbt/stock_mart/.user.yml
 dbt/profiles.yml
+dbt/stock_mart/logs/
 
 # Python
 __pycache__/
-*py[cod]
+*.py[cod]
 .venv/
 venv/
 
-# Docket
+# Docker
 postgres_data/
 
 # OS
