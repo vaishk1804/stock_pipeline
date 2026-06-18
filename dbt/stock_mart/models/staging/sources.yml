@@ -1,0 +1,37 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: Raw landing zone populated by Airflow ingestion DAG.
+    tables:
+      - name: daily_prices
+        description: One row per ticker per trading day. Raw OHLCV from Alpha Vantage.
+        columns:
+          - name: ticker
+            tests:
+              - not_null
+          - name: trade_date
+            tests:
+              - not_null
+          - name: close_price
+            tests:
+              - not_null
+
+      - name: tickers
+        description: Reference table of ticker metadata.
+        columns:
+          - name: ticker
+            tests:
+              - not_null
+              - unique
+
+      - name: intraday_prices
+        description: Real-time intraday snapshots written by Kafka consumer.
+        columns:
+          - name: ticker
+            tests:
+              - not_null
+          - name: produced_at
+            tests:
+              - not_null

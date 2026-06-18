@@ -106,5 +106,20 @@ services:
     command: scheduler
     restart: always
 
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-postgres:1.7.0
+    container_name: stock_pipelines_dbt
+    volumes:
+      - ./dbt/stock_mart:/usr/app/dbt
+      - ./dbt/profiles.yml:/root/.dbt/profiles.yml
+    environment:
+      - DBT_PROFILES_DIR=/root/.dbt
+    working_dir: /usr/app/dbt
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - dbt
+      
 volumes:
   postgres_data:

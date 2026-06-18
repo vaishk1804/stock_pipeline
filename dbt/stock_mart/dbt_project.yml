@@ -1,0 +1,24 @@
+name: "stock_mart"
+version: "1.0.0"
+config-version: 2
+
+profile: "stock_mart"
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt packages"
+
+models:
+  stock_mart:
+    staging:
+      +schema: staging
+      +materialized: view
+
+    marts:
+    +schema: marts
+    +materialized: table

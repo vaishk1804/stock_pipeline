@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: stg_daily_prices
+    description: Cleaned and typed daily OHLCV data.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - ticker
+            - trade_date
+
+    columns:
+      - name: ticker
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_tickers')
+              field: ticker
+      - name: trade_date
+        tests:
+          - not_null
+      - name: close
+        tests:
+          - not_null
+
+  - name: stg_tickers
+    description: Ticker reference data
+    columns:
+      - name: ticker
+        tests:
+          - not_null
+          - unique
