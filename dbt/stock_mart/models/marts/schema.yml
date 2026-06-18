@@ -27,3 +27,32 @@ models:
       - name: sector
         tests:
           - not_null
+
+  - name: mart_moving_averages
+    description: >
+      7, 30, and 90-day simple moving averages per ticker per day.
+      Includes relative volume and golden/death cross signals
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - ticker
+            - trade_date
+    columns:
+      - name: ticker
+        tests:
+          - not_null
+      - name: trade_date
+        tests:
+          - not_null
+      - name: ma_7d
+        tests:
+          - not_null
+      - name: ma_30d
+        tests:
+          - not_null
+      - name: ma_cross_signal
+        tests:
+          - accepted_values:
+              values: ["golden_cross", "death_cross"]
+              config:
+                where: "ma_cross_signal IS NOT NULL"
