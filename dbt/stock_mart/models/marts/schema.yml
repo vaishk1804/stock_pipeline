@@ -56,3 +56,20 @@ models:
               values: ["golden_cross", "death_cross"]
               config:
                 where: "ma_cross_signal IS NOT NULL"
+
+  - name: mart_top_movers
+    description: >
+      Daily leaderboard of top-5 gainers and top-5 losers by daily_return_pct
+      Includes 5-day rolling return for momentum context.
+    columns:
+      - name: ticker
+        tests:
+          - not_null
+      - name: trade_date
+        tests:
+          - not_null
+      - name: mover_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["top_gainer", "top_loser", "both"]
