@@ -1,0 +1,12 @@
+stock_mart:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: postgres
+      port: 5432
+      dbname: stocks
+      user: airflow
+      password: airflow
+      schema: public
+      threads: 4

@@ -68,6 +68,7 @@ services:
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
       - ./scripts:/opt/airflow/scripts
+      - ./dbt/stock_mart:/opt/airflow/dbt_project
     ports:
       - "8080:8080"
     command: webserver
@@ -103,17 +104,17 @@ services:
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
       - ./scripts:/opt/airflow/scripts
+      - ./dbt/stock_mart:/opt/airflow/dbt_project
     command: scheduler
     restart: always
 
   dbt:
     image: ghcr.io/dbt-labs/dbt-postgres:1.7.0
-    container_name: stock_pipelines_dbt
+    container_name: stock_pipeline_dbt
     volumes:
       - ./dbt/stock_mart:/usr/app/dbt
-      - ./dbt/profiles.yml:/root/.dbt/profiles.yml
     environment:
-      - DBT_PROFILES_DIR=/root/.dbt
+      - DBT_PROFILES_DIR=/usr/app/dbt
     working_dir: /usr/app/dbt
     depends_on:
       postgres:

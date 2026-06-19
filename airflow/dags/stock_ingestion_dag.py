@@ -18,6 +18,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.dates import days_ago
+from airflow.operators.bash import BashOperator
 
 # Adding scripts/ to path so we can import directly
 sys.path.insert(0,"/opt/airflow/scripts")
@@ -30,6 +31,8 @@ logger = logging.getLogger(__name__)
 # ---- Wrapper functions -----
 # Airflow tasks functions need **context as parameter
 # The scripts dont have that so we wrap them
+
+DBT_PROJECT_DIR = "/opt/airflow/dbt_project"
 
 def check_api_health(**context):
   API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY","")
@@ -89,12 +92,39 @@ with DAG(
       task_id="validate_raw_data",
       python_callable=validate_task,
     )
+  
+  dbt_run_staging = BashOperator(
+    task_id="dbt_run_staging",
+    bash_command=(
+      f"cd {DBT_PROJECT_DIR} && "
+      f"DBT_PROFILES_DIR={DBT_PROJECT_DIR} "
+      f"dbt run --select staging"
+    ),
+  )
+
+  dbt_run_marts = BashOperator(
+    task_id="dbt_run_marts",
+    bash_command=(
+      f"cd {DBT_PROJECT_DIR} && "
+      f"DBT_PROFILES_DIR={DBT_PROJECT_DIR} "
+      f"dbt run --select marts"
+    ),
+  )
+
+  dbt_test_all = BashOperator(
+    task_id="dbt_test_all",
+    bash_command=(
+      f"cd {DBT_PROJECT_DIR} && "
+      f"DBT_PROFILES_DIR={DBT_PROJECT_DIR} "
+      f"dbt test"
+    ),
+  )
 
   pipeline_complete = EmptyOperator(task_id="pipeline_complete")
 
   api_health >> fetch_tasks[0]
   for i in range(len(fetch_tasks)-1):
       fetch_tasks[i]>>fetch_tasks[i+1]
-  fetch_tasks[-1]>>validate>>pipeline_complete
+  fetch_tasks[-1]>>validate>>dbt_run_staging>> dbt_run_marts >> dbt_test_all >> pipeline_complete
 
 
